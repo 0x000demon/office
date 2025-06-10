@@ -1,0 +1,20 @@
+{
+  "name": "receive",
+  "version": "1.0.0",
+  "description": "A simple Express.js server for sending messages to Telegram using axios",
+  "main": "index.js", 
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+  	"express": "^4.17.1",
+    "axios": "^0.23.0",
+    "body-parser": "^1.19.0",
+  	"express-edge": "^3.0.0",
+    "ip-range-check": "^0.2.0",
+    "isbot": "^3.7.0",
+    "request-ip": "^3.3.0",
+    "simple-telegram-message": "^1.0.0",
+    "ip-range-check": "^0.0.2"
+  }
+}
