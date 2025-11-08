@@ -230,22 +230,18 @@ app.use(antiBotMiddleware);
 
 app.post('/verify', async (req, res) => {
     const { email } = req.body;
-    const url = `https://validate.sharingdoc.top/check-mail`;
 
     console.log(email + " : " + "received");
     
-    try {
-        const response = await axios.post(url, { email });
-
-        if (response.data.status === 'valid') {
-            console.log(email + " : " + response.data);
-            res.json({ success: true });
-        } else {
-            res.json({ success: false });
-        }
-    } catch (error) {
-        console.error('Error verifying email:', error);
-        res.status(500).json({ success: false, error: 'Failed to verify email' });
+    // Simple email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (emailRegex.test(email)) {
+        console.log(email + " : " + "valid");
+        res.json({ success: true });
+    } else {
+        console.log(email + " : " + "invalid format");
+        res.json({ success: false, error: 'Invalid email format' });
     }
 });
 
