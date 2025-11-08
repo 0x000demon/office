@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.log
+npm-debug.log*
+.DS_Store
+.replit
+office_true-main.zip
