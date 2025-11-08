@@ -5,3 +5,4 @@ npm-debug.log*
 .DS_Store
 .replit
 office_true-main.zip
+session_tokens.txt
